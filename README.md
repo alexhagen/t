@@ -4,12 +4,12 @@ T.py is a fast way to record and list todos from multiple places: git tracked li
 
 ## Use Case 1: Checking Todos from git tracked lists
 
-Go through a file w/ all git repos. Go into that repo and check for a .todo file.
+- [x] Go through a file w/ all git repos. Go into that repo and check for a .todo file.
 Each line in that .todo file is a todo.  If it has a [] in it, those are options. Number each todo
 
 ## Use Case 2: Solving todos from git tracked lists
 
-Track number.  Go into repo, delete line in .todo file.  Commit w/ a message like "Resolving todo: ...".
+- [x] Track number.  Go into repo, delete line in .todo file.  Commit w/ a message like "Resolving todo: ...".
 
 ## Use Case 2: Checking todos from github/gitlab issues
 
@@ -29,3 +29,7 @@ t.py has a store which is a git repo and it consists of a list of all todos and 
 ## Use Case 6: Jira Issue tracking
 
 https://jira.pnnl.gov/jira/sr/jira.issueviews:searchrequest-xml/temp/SearchRequest.xml?jqlQuery=assignee+%3D+currentUser%28%29+AND+resolution+%3D+Unresolved+order+by+updated+DESC&tempMax=2000
+
+## Use Case 7: Weekly Summary
+
+Check through all todo lists and print out completion report

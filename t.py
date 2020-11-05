@@ -4,6 +4,27 @@ import os
 import re
 import sys
 import subprocess
+import itertools
+
+colors = itertools.cycle([
+    '\033[95m',
+    '\033[94m',
+    '\033[96m',
+    '\033[92m',
+    '\033[93m',
+    '\033[91m',
+    '\033[1m',
+    '\033[4m'])
+#colors = []
+#style = 7
+#for fg in range(30,38):
+#    for bg in range(40,48):
+#        if (fg - 30) == (bg - 40):
+#            continue
+#        format = ';'.join([str(style), str(fg), str(bg)])
+#        colors.append('\x1b[%sm' % (format))
+#colors = itertools.cycle(colors)
+endcolor = '\033[0m'
 
 class Store(dict):
     def __init__(self):
@@ -50,7 +71,8 @@ class t(object):
         if data is not None:
             if 'projects' in data.keys():
                 for project in data['projects'].keys():
-                    print(project)
+                    color = next(colors)
+                    print(f'{color}{project}{endcolor}')
         else:
             print("t is not tracking any projects yet")
 
@@ -88,17 +110,18 @@ class t(object):
         args = parser.parse_args(sys.argv[2:])
         project = args.project
         task = args.task
-        print(project, task)
         data = self._get_data()
         path = os.path.join(data['projects'][project]['path'])
         with open(os.path.join(path, '.todo'), 'a') as f:
-            f.write(task)
+            f.write(f"{task}\n")
+        devnull = open(os.devnull, 'w')
         p = subprocess.Popen(['git', 'add', '.todo'],
-                             cwd=path)
+                             cwd=path, stdout=devnull)
         p.wait()
         p = subprocess.Popen(['git', 'commit', '-m', f'adding task "{task}"'],
-                             cwd=path)
+                             cwd=path, stdout=devnull)
         p.wait()
+        devnull.close()
 
     def list(self):
         data = self._get_data()
@@ -111,10 +134,48 @@ class t(object):
         else:
             projects = data['projects'].keys()
         for project in projects:
+            color = next(colors)
             path = os.path.join(data['projects'][project]['path'])
-            f = open(os.path.join(path, '.todo'))
-            for task in f:
-                print(f'[{project}]: {task.strip()}')
+            todo_filename = os.path.join(path, '.todo')
+            if os.path.exists(todo_filename):
+                f = open(todo_filename)
+                for i, task in enumerate(f):
+                    print(f'{color}#{i} [{project}]{endcolor}: {task.strip()}')
+
+    def complete(self):
+        parser = argparse.ArgumentParser(description='List all Tasks')
+        parser.add_argument('project')
+        parser.add_argument('taskno', type=int)
+        args = parser.parse_args(sys.argv[2:])
+        project = args.project
+        taskno = args.taskno
+        data = self._get_data()
+        path = os.path.join(data['projects'][project]['path'])
+        with open(os.path.join(path, '.todo'), "r+") as f:
+            d = f.readlines()
+            f.seek(0)
+            for i, _task in enumerate(d):
+                if i != taskno:
+                    f.write(_task)
+                else:
+                    task = _task
+            f.truncate()
+        devnull = open(os.devnull, 'w')
+        p = subprocess.Popen(['git', 'add', '.todo'],
+                             cwd=path, stdout=devnull)
+        p.wait()
+        p = subprocess.Popen(['git', 'commit', '-m', f'completed task "{task}"'],
+                             cwd=path, stdout=devnull)
+        p.wait()
+
+    def c(self):
+        self.complete()
+
+    def a(self):
+        self.add()
+
+    def ls(self):
+        self.list()
 
 if __name__ == "__main__":
     t()

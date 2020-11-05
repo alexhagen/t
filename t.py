@@ -3,6 +3,7 @@ import yaml
 import os
 import re
 import sys
+import subprocess
 
 class Store(dict):
     def __init__(self):
@@ -33,6 +34,7 @@ def grep(filepath, regex):
     
 class t(object):
     def __init__(self):
+        self.t_filename = os.path.join(os.path.expanduser('~'), '.t')
         parser = argparse.ArgumentParser(description='todo list',
                                          usage='t <command> [<args>]')
         parser.add_argument('command', help='subcommand to run')
@@ -44,37 +46,75 @@ class t(object):
         getattr(self, args.command)()
 
     def listproj(self):
-        # load ~/.t
-        t_filename = os.path.join(os.path.expanduser('~'), '.t')
-        # print the list of projects from the t yaml file
-        with open(t_filename) as f:
-            data = yaml.load(f, Loader=yaml.FullLoader)
-            if data is not None:
-                if 'projects' in data.keys():
-                    for project in data['projects']:
-                        print(project)
-            else:
-                print("t is not tracking any projects yet")
+        data = self._get_data()
+        if data is not None:
+            if 'projects' in data.keys():
+                for project in data['projects'].keys():
+                    print(project)
+        else:
+            print("t is not tracking any projects yet")
+
+    def _get_data(self):
+        data = yaml.load(open(self.t_filename), Loader=yaml.FullLoader)
+        return data
+
+    def _write_data(self, data):
+        with open(self.t_filename, 'w') as f:
+            yaml.dump(data, f)
+        return
 
     def addproj(self):
         parser = argparse.ArgumentParser(description="Add a project to track")
+        parser.add_argument('projectname')
+        parser.add_argument('path')
+        args = parser.parse_args(sys.argv[2:])
+        projectname = args.projectname
+        path = args.path
+        # print the list of projects from the t yaml file
+        data = self._get_data()
+        if data is None:
+            data = {'projects': {}}
+        if 'projects' not in data.keys():
+            data['projects'] = {}
+        if projectname not in data['projects'].keys():
+            data['projects'][projectname] = dict(path=os.path.abspath(path))
+        self._write_data(data)
+        print(f"added {projectname} to t!")
+
+    def add(self):
+        parser = argparse.ArgumentParser(description="Add a task to a project")
         parser.add_argument('project')
+        parser.add_argument('task')
         args = parser.parse_args(sys.argv[2:])
         project = args.project
-        # load ~/.t
-        t_filename = os.path.join(os.path.expanduser('~'), '.t')
-        # print the list of projects from the t yaml file
-        data = yaml.load(open(t_filename), Loader=yaml.FullLoader)
-        if data is None:
-            data = {'projects': []}
-        if 'projects' not in data.keys():
-            data['projects'] = []
-        if project not in data['projects']:
-            data['projects'].append(os.path.abspath(project))
-        with open(t_filename, 'w') as f:
-            yaml.dump(data, f)
-        print(f"added {project} to t!")
+        task = args.task
+        print(project, task)
+        data = self._get_data()
+        path = os.path.join(data['projects'][project]['path'])
+        with open(os.path.join(path, '.todo'), 'a') as f:
+            f.write(task)
+        p = subprocess.Popen(['git', 'add', '.todo'],
+                             cwd=path)
+        p.wait()
+        p = subprocess.Popen(['git', 'commit', '-m', f'adding task "{task}"'],
+                             cwd=path)
+        p.wait()
 
+    def list(self):
+        data = self._get_data()
+        if len(sys.argv) > 2:
+            parser = argparse.ArgumentParser(description='List all Tasks')
+            parser.add_argument('project')
+            args = parser.parse_args(sys.argv[2:])
+            project = args.project
+            projects = [project]
+        else:
+            projects = data['projects'].keys()
+        for project in projects:
+            path = os.path.join(data['projects'][project]['path'])
+            f = open(os.path.join(path, '.todo'))
+            for task in f:
+                print(f'[{project}]: {task.strip()}')
 
 if __name__ == "__main__":
     t()

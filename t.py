@@ -146,6 +146,7 @@ class t(object):
         else:
             projects = data['projects'].keys()
         for project in projects:
+            i = 0
             color = next(colors)
             path = os.path.join(data['projects'][project]['path'])
             todo_filename = os.path.join(path, '.todo')
